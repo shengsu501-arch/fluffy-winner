@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>自动播放音乐</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            text-align: center;
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .loading-screen {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 2s ease-in;
+        }
+        h1 {
+            font-size: 2.8em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        .music-note {
+            font-size: 60px;
+            margin: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        .loading-text {
+            font-size: 18px;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+        .progress-bar {
+            width: 300px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            margin: 30px auto;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        .controls {
+            margin-top: 30px;
+            opacity: 0;
+            animation: showControls 1s 3s forwards;
+        }
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 30px;
+            margin: 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: white;
+            color: #1a2a6c;
+        }
+        @keyframes showControls {
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen">
+        <div class="music-note">🎵</div>
+        <h1>音乐加载中...</h1>
+        
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+        
+        <div class="loading-text" id="status">
+            正在准备播放音乐，请稍候...
+        </div>
+        
+        <div class="controls" id="controls">
+            <button onclick="toggleMusic()">⏸️ 暂停</button>
+            <button onclick="restartMusic()">🔄 重新开始</button>
+            <button onclick="changeVolume(0.5)">🔊 音量50%</button>
+            <button onclick="changeVolume(1)">🔊 音量100%</button>
+        </div>
+    </div>
+
+    <!-- 重要：修改下面的文件名 -->
+    <audio id="bgMusic" loop>
+        <source src="佐藤千亜妃-花曇り.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const music = document.getElementById('bgMusic');
+        const statusText = document.getElementById('status');
+        const progressBar = document.getElementById('progress');
+        
+        // 自动播放音乐
+        function startMusic() {
+            // 显示加载进度
+            let progress = 0;
+            const loadingInterval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 90) {
+                    clearInterval(loadingInterval);
+                    statusText.textContent = "正在启动音乐播放器...";
+                    
+                    // 尝试自动播放
+                    setTimeout(() => {
+                        music.volume = 0.7; // 设置初始音量
+                        
+                        const playPromise = music.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                // 播放成功
+                                statusText.innerHTML = "✅ 音乐开始自动播放！";
+                                progressBar.style.width = '100%';
+                                progressBar.style.background = '#00ff88';
+                                
+                                // 更新音乐信息显示
+                                setInterval(updateMusicInfo, 1000);
+                            }).catch(error => {
+                                // 自动播放被阻止
+                                statusText.innerHTML = "🔇 自动播放被阻止<br>请<span style='color:#00ff88'>点击页面任意位置</span>播放音乐";
+                                document.body.style.cursor = 'pointer';
+                                
+                                // 点击页面播放
+                                document.body.onclick = function() {
+                                    music.play();
+                                    statusText.innerHTML = "✅ 音乐开始播放！";
+                                    document.body.style.cursor = 'default';
+                                    document.body.onclick = null;
+                                };
+                            });
+                        }
+                    }, 1000);
+                }
+            }, 200);
+        }
+        
+        // 更新音乐信息
+        function updateMusicInfo() {
+            if (!music.paused) {
+                const currentTime = formatTime(music.currentTime);
+                const duration = formatTime(music.duration);
+                statusText.innerHTML = `🎶 播放中 | ${currentTime} / ${duration}`;
+            }
+        }
+        
+        // 格式化时间
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        
+        // 控制函数
+        function toggleMusic() {
+            if (music.paused) {
+                music.play();
+                document.querySelector('button').innerHTML = '⏸️ 暂停';
+            } else {
+                music.pause();
+                document.querySelector('button').innerHTML = '▶️ 播放';
+            }
+        }
+        
+        function restartMusic() {
+            music.currentTime = 0;
+            music.play();
+            document.querySelector('button').innerHTML = '⏸️ 暂停';
+        }
+        
+        function changeVolume(level) {
+            music.volume = level;
+            statusText.innerHTML = `音量设置为: ${Math.round(level * 100)}%`;
+        }
+        
+        // 页面加载完成后开始
+        window.onload = function() {
+            setTimeout(startMusic, 1000);
+        };
+        
+        // 监听音乐播放进度
+        music.addEventListener('timeupdate', function() {
+            if (music.duration) {
+                const percent = (music.currentTime / music.duration) * 100;
+                progressBar.style.width = percent + '%';
+            }
+        });
+    </script>
+</body>
+</html>
